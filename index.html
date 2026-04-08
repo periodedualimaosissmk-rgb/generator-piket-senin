@@ -47,19 +47,20 @@
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .btn-hapus { background: transparent; color: #ff4757; border: 1px solid #ff4757; border-radius: 5px; padding: 3px 8px; font-size: 11px; cursor: pointer; }
 
-        /* CUSTOM DROPDOWN SEARCH */
+        /* INPUT DAN CUSTOM DROPDOWN */
         .search-wrapper { position: relative; width: 100%; }
         input[type="text"], textarea {
             width: 100%; padding: 12px; border: none; border-radius: 10px;
             background: rgba(255, 255, 255, 0.95); color: #333; font-size: 14px; outline: none;
         }
+        
         .dropdown-list {
             position: absolute; top: 100%; left: 0; right: 0; background: #fff; color: #333;
-            border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 150px; overflow-y: auto;
-            z-index: 100; display: none; text-align: left; margin-top: 5px;
+            border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.4); max-height: 180px; overflow-y: auto;
+            z-index: 999; display: none; text-align: left; margin-top: 5px; border: 1px solid #ddd;
         }
-        .dropdown-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; }
-        .dropdown-item:hover { background: #f1f1f1; color: #25D366; font-weight: 600; }
+        .dropdown-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; font-weight: 500; }
+        .dropdown-item:active { background: #f1f1f1; color: #25D366; }
 
         /* CHIPS */
         .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -107,13 +108,15 @@
     </div>
 
     <script>
+        // ⚠️ ID SPREADSHEET (Sudah dikembalikan ke settingan awal kamu)
         const ID_SPREADSHEET_ABSEN = "12flkTGNFV6wjHRHCfSXS4FlLr6FpME5YKsJCH_pUMP8"; 
+        
         const kelasList = ["10 TKR", "10 TKJ", "10 MP", "11 TKR", "11 TKJ", "11 MP", "12 TKR", "12 TKJ", "12 MP"];
         const pelanggaranList = ["Topi", "Dasi", "Badge", "Kaos Kaki", "Terlambat", "Lainnya"];
 
         let activeTab = "10 TKR";
-        let dbSiswa = []; // Array objek { nama: "", chips: [], lainnya: "" }
-        let listSiswaServer = []; // Nama-nama dari Google Sheets untuk kelas aktif
+        let dbSiswa = []; 
+        let listSiswaServer = []; 
 
         window.onload = () => {
             renderTabs();
@@ -132,16 +135,19 @@
             });
         }
 
+        // --- SISTEM TARIK DATA 100% PERSIS WEB 1 ---
         async function switchTab(kelas) {
-            simpanInput();
+            simpanKeMemori();
             activeTab = kelas;
-            dbSiswa = []; // Reset inputan kalau ganti kelas biar ga campur (atau biarkan jika ingin akumulasi)
+            dbSiswa = []; // Bersihkan kotak input kalau pindah kelas
+            listSiswaServer = []; // Kosongkan daftar absen lama
             renderTabs();
-            tambahKotak(); 
             
             const status = document.getElementById('status-loading');
             status.style.display = 'block';
-            status.innerText = "⏳ Memuat data " + kelas + "...";
+            status.innerText = "⏳ Sedang memuat absen " + kelas + "...";
+            status.style.color = "#ff9f43";
+            document.getElementById('pelanggar-container').innerHTML = ""; // Hapus kotak saat loading
 
             let parts = kelas.split(' ');
             let kls = parts[0];
@@ -153,30 +159,39 @@
 
             try {
                 const res = await fetch(csvUrl);
+                if (!res.ok) throw new Error("Gagal mengambil data");
                 const text = await res.text();
+                
                 let rawNames = text.split('\n').map(row => row.replace(/"/g, '').trim());
                 listSiswaServer = rawNames.filter(n => n !== "" && !n.toLowerCase().includes("nama"));
                 
                 status.innerText = `✅ Data ${kelas} Siap!`;
+                status.style.color = "#25D366";
                 setTimeout(() => { status.style.display = 'none'; }, 2000);
+
+                // Baru munculkan kotak siswa SETELAH data absen berhasil ditarik
+                tambahKotak(); 
+
             } catch (e) {
-                status.innerText = "❌ Gagal muat data.";
+                status.innerText = "❌ Gagal memuat absen. Periksa internet Anda.";
+                status.style.color = "#ff4757";
+                tambahKotak(); // Tetap munculin kotak walau gagal (biar bisa ketik manual)
             }
         }
 
         function tambahKotak() {
-            dataSiswaKeMemori();
+            simpanKeMemori();
             dbSiswa.push({ nama: "", chips: [], lainnya: "" });
             renderKotak();
         }
 
         function hapusKotak(index) {
-            dataSiswaKeMemori();
+            simpanKeMemori();
             dbSiswa.splice(index, 1);
             renderKotak();
         }
 
-        function dataSiswaKeMemori() {
+        function simpanKeMemori() {
             const cards = document.querySelectorAll('.card-siswa');
             cards.forEach((card, i) => {
                 if(dbSiswa[i]) {
@@ -191,11 +206,27 @@
             const container = document.getElementById('pelanggar-container');
             container.innerHTML = "";
             
+            // Susun HTML untuk isi dropdown dari listSiswaServer yang baru ditarik
+            let dropdownHtml = "";
+            listSiswaServer.forEach(nama => {
+                // Gunakan escape character biar aman dari nama yang ada tanda kutipnya
+                const safeNama = nama.replace(/'/g, "\\'");
+                // Gunakan onmousedown karena dia dieksekusi lebih dulu daripada onblur di input
+                dropdownHtml += `<div class="dropdown-item" onmousedown="pilihNama(${dbSiswa.length}, '${safeNama}', event)">${nama}</div>`;
+            });
+
             dbSiswa.forEach((data, i) => {
                 let chipsHtml = "";
                 pelanggaranList.forEach(p => {
                     const active = data.chips.includes(p) ? "active" : "";
                     chipsHtml += `<div class="chip ${active}" onclick="toggleChip(${i}, '${p}')">${p}</div>`;
+                });
+
+                // Perbaiki onclick parameter nama menggunakan template strings yang aman
+                let itemHtmlPerKotak = "";
+                listSiswaServer.forEach(nama => {
+                    const safeNama = nama.replace(/'/g, "\\'");
+                    itemHtmlPerKotak += `<div class="dropdown-item" onmousedown="pilihNama(${i}, '${safeNama}')">${nama}</div>`;
                 });
 
                 container.innerHTML += `
@@ -204,61 +235,77 @@
                             <span style="font-size:12px; font-weight:bold; color:#25D366;">#${i + 1} Pelanggar</span>
                             ${i > 0 ? `<button class="btn-hapus" onclick="hapusKotak(${i})">Hapus</button>` : ''}
                         </div>
+                        
                         <div class="search-wrapper">
-                            <input type="text" class="input-nama" placeholder="Cari Nama Siswa..." onkeyup="filterDropdown(${i}, this)" onclick="showDropdown(${i})" autocomplete="off" value="${data.nama}">
-                            <div class="dropdown-list" id="dropdown-${i}"></div>
+                            <input type="text" id="input-nama-${i}" class="input-nama" placeholder="Cari Nama Siswa..." 
+                                autocomplete="new-password" 
+                                value="${data.nama}"
+                                onfocus="bukaDropdown(${i})" 
+                                onkeyup="filterDropdown(${i})"
+                                onblur="tutupDropdown(${i})">
+                            <div class="dropdown-list" id="dropdown-${i}">
+                                ${itemHtmlPerKotak}
+                            </div>
                         </div>
+
                         <div class="chip-group">${chipsHtml}</div>
-                        <input type="text" class="input-lainnya" placeholder="Ketik manual..." style="display:${data.chips.includes('Lainnya')?'block':'none'}" value="${data.lainnya}">
+                        <input type="text" class="input-lainnya" placeholder="Ketik pelanggaran lainnya..." style="display:${data.chips.includes('Lainnya')?'block':'none'}" value="${data.lainnya}">
                     </div>
                 `;
             });
         }
 
-        // --- SISTEM CUSTOM DROPDOWN (ANTI-HISTORY) ---
-        function showDropdown(index) {
-            const dropdown = document.getElementById(`dropdown-${index}`);
-            dropdown.innerHTML = "";
-            listSiswaServer.forEach(nama => {
-                const div = document.createElement('div');
-                div.className = 'dropdown-item';
-                div.textContent = nama;
-                div.onclick = () => {
-                    document.querySelectorAll('.input-nama')[index].value = nama;
-                    dropdown.style.display = 'none';
-                    dbSiswa[index].nama = nama;
-                };
-                dropdown.appendChild(div);
-            });
-            dropdown.style.display = 'block';
+        // --- SISTEM DROPDOWN CERDAS ---
+        function bukaDropdown(index) {
+            // Sembunyikan semua dropdown lain dulu
+            document.querySelectorAll('.dropdown-list').forEach(d => d.style.display = 'none');
+            
+            const drop = document.getElementById(`dropdown-${index}`);
+            // Cek kalau ada isinya, baru munculin (biar kotak putih kosong ga nongol)
+            if (drop && drop.children.length > 0) {
+                drop.style.display = 'block';
+            }
         }
 
-        function filterDropdown(index, input) {
+        function tutupDropdown(index) {
+            // Beri sedikit delay agar event 'onmousedown' di item dropdown sempat berjalan
+            setTimeout(() => {
+                const drop = document.getElementById(`dropdown-${index}`);
+                if (drop) drop.style.display = 'none';
+            }, 150);
+        }
+
+        function filterDropdown(index) {
+            const input = document.getElementById(`input-nama-${index}`);
             const filter = input.value.toLowerCase();
-            const dropdown = document.getElementById(`dropdown-${index}`);
-            const items = dropdown.getElementsByClassName('dropdown-item');
-            let match = 0;
+            dbSiswa[index].nama = input.value; // Simpan ketikan ke memori
+
+            const drop = document.getElementById(`dropdown-${index}`);
+            const items = drop.getElementsByClassName('dropdown-item');
+            let adaYangCocok = false;
             
             for (let i = 0; i < items.length; i++) {
-                let txt = items[i].textContent || items[i].innerText;
-                if (txt.toLowerCase().indexOf(filter) > -1) {
-                    items[i].style.display = "";
-                    match++;
+                let txt = items[i].innerText.toLowerCase();
+                if (txt.indexOf(filter) > -1) {
+                    items[i].style.display = "block";
+                    adaYangCocok = true;
                 } else {
                     items[i].style.display = "none";
                 }
             }
-            dropdown.style.display = match > 0 ? "block" : "none";
+            drop.style.display = adaYangCocok ? "block" : "none";
         }
 
-        document.addEventListener('click', function(e) {
-            if (!e.target.classList.contains('input-nama')) {
-                document.querySelectorAll('.dropdown-list').forEach(d => d.style.display = 'none');
-            }
-        });
+        function pilihNama(index, nama) {
+            const input = document.getElementById(`input-nama-${index}`);
+            input.value = nama;
+            dbSiswa[index].nama = nama; // Masukkan ke database lokal web
+            document.getElementById(`dropdown-${index}`).style.display = 'none';
+        }
 
+        // --- SISTEM CHIPS & GENERATE TEKS ---
         function toggleChip(index, p) {
-            dataSiswaKeMemori();
+            simpanKeMemori();
             let arr = dbSiswa[index].chips;
             let i = arr.indexOf(p);
             if(i > -1) arr.splice(i, 1);
@@ -267,19 +314,25 @@
         }
 
         function generateTeks() {
-            dataSiswaKeMemori();
+            simpanKeMemori();
             let finalTeks = "";
+            let count = 0;
+
             dbSiswa.forEach(row => {
                 if (row.nama && row.chips.length > 0) {
                     let list = [...row.chips];
                     if(list.includes("Lainnya")) {
                         list = list.filter(p => p !== "Lainnya");
-                        if(row.lainnya) list.push(row.lainnya);
+                        if(row.lainnya && row.lainnya.trim() !== "") {
+                            list.push(row.lainnya.trim());
+                        }
                     }
                     finalTeks += `${row.nama} ${activeTab.toLowerCase()}: ${list.join(', ')}\n`;
+                    count++;
                 }
             });
-            if(!finalTeks) return alert("Isi minimal 1 data!");
+
+            if(count === 0) return alert("Pilih minimal 1 nama dan pelanggarannya!");
             document.getElementById('teks-hasil').value = finalTeks;
             document.getElementById('halaman-input').style.display = "none";
             document.getElementById('halaman-hasil').style.display = "block";
@@ -288,13 +341,13 @@
         function kembaliEdit() {
             document.getElementById('halaman-input').style.display = "block";
             document.getElementById('halaman-hasil').style.display = "none";
+            document.getElementById('btn-copy').innerText = "📋 Salin Teks";
         }
 
         function salinTeks() {
             const t = document.getElementById('teks-hasil');
             t.select(); document.execCommand('copy');
             document.getElementById('btn-copy').innerText = "✅ Tersalin!";
-            setTimeout(() => { document.getElementById('btn-copy').innerText = "📋 Salin Teks"; }, 2000);
         }
     </script>
 </body>
