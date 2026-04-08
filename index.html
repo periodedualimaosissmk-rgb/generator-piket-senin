@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generator Laporan Razia</title>
+    <title>Generator Laporan OSIS</title>
     <link rel="icon" type="image/jpeg" href="https://cdn.yupra.my.id/yp/dc9y33vh.jpg">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
@@ -25,7 +25,7 @@
 
         h2 { text-align: center; margin-bottom: 15px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 20px; }
 
-        /* TABS GESER (HORIZONTAL) */
+        /* TABS GESER */
         .tabs-wrapper {
             overflow-x: auto; display: flex; gap: 10px; padding-bottom: 10px; margin-bottom: 10px;
             scrollbar-width: none; -ms-overflow-style: none;
@@ -54,7 +54,6 @@
             background: rgba(255, 255, 255, 0.95); color: #333; font-size: 14px; outline: none;
         }
 
-        /* CHIPS */
         .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
         .chip {
             padding: 7px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3);
@@ -64,7 +63,6 @@
 
         .input-lainnya { display: none; width: 100%; margin-top: 10px; padding: 10px; font-size: 12px; }
 
-        /* BUTTONS */
         .btn-tambah {
             width: 100%; padding: 12px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px;
             background: transparent; color: white; font-weight: 600; font-size: 14px; cursor: pointer; margin-bottom: 20px;
@@ -80,31 +78,29 @@
 <body>
 
     <div class="container">
-        
         <div class="glass-effect" id="halaman-input">
             <h2>📝 Generator Laporan</h2>
             
             <div class="tabs-wrapper" id="tabs-kelas"></div>
-            <div id="status-loading">⏳ Mengambil absen dari server...</div>
+            <div id="status-loading">⏳ Menarik absen...</div>
             <datalist id="datalist-nama"></datalist>
 
             <div id="pelanggar-container"></div>
 
-            <button class="btn-tambah" onclick="tambahKotak()">➕ Tambah Siswa di Kelas Ini</button>
-            <button class="btn-primary" onclick="generateTeks()">🚀 Tampilkan Teks Salinan</button>
+            <button class="btn-tambah" onclick="tambahKotak()">➕ Tambah Siswa</button>
+            <button class="btn-primary" onclick="generateTeks()">🚀 Buat Teks Laporan</button>
         </div>
 
         <div class="glass-effect" id="halaman-hasil">
             <h2>📋 Teks Siap Salin</h2>
             <textarea id="teks-hasil" rows="15" style="margin-bottom: 15px;"></textarea>
-            <button class="btn-primary" onclick="salinTeks()" id="btn-copy">📋 Salin Semua Teks</button>
-            <button class="btn-primary" style="background: rgba(255,255,255,0.2); margin-top:10px; box-shadow: none;" onclick="kembaliEdit()">⬅️ Kembali Edit</button>
+            <button class="btn-primary" onclick="salinTeks()" id="btn-copy">📋 Salin Teks</button>
+            <button class="btn-primary" style="background: rgba(255,255,255,0.2); margin-top:10px;" onclick="kembaliEdit()">⬅️ Kembali</button>
         </div>
-
     </div>
 
     <script>
-        // ⚠️ ID SPREADSHEET ABSENSI (Sama persis dengan Web 1)
+        // ⚠️ GANTI ID INI DENGAN ID SPREADSHEET KAMU YANG ASLI ⚠️
         const ID_SPREADSHEET_ABSEN = "12flkTGNFV6wjHRHCfSXS4FlLr6FpME5YKsJCH_pUMP8"; 
         
         const kelasList = ["10 TKR", "10 TKJ", "10 MP", "11 TKR", "11 TKJ", "11 MP", "12 TKR", "12 TKJ", "12 MP"];
@@ -131,38 +127,36 @@
             });
         }
 
-        // --- MESIN PENARIK DATA: 100% PERSIS SEPERTI WEB 1 ---
-        async function switchTab(kelasTarget) {
+        // --- FUNGSI TARIK DATA (CONTEKAN PERSIS DARI WEB 1) ---
+        async function switchTab(kelas) {
             simpanKeMemori();
-            activeTab = kelasTarget;
+            activeTab = kelas;
             renderTabs();
             renderKotak();
             
             const status = document.getElementById('status-loading');
             status.style.display = 'block';
-            status.innerText = "⏳ Mengambil absen dari server...";
+            status.innerText = "⏳ Sedang memuat nama...";
             status.style.color = "#ff9f43";
-            
-            // Memecah "10 TKR" jadi kls="10" dan jur="TKR"
-            let parts = kelasTarget.split(' ');
+
+            let parts = kelas.split(' ');
             let kls = parts[0];
             let jur = parts[1];
-
-            // Aturan baku dari Web 1
             if (jur === "TKR") jur = "TKRO";
             
             const sheetName = `${kls} ${jur}`; 
             const targetRange = (kls === "12") ? "B7:B" : "D2:D";
+            
+            // Format URL ini yang paling sakti di Web 1 kamu
             const csvUrl = `https://docs.google.com/spreadsheets/d/${ID_SPREADSHEET_ABSEN}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${targetRange}&cache=${new Date().getTime()}`;
 
             try {
                 const res = await fetch(csvUrl);
-                if (!res.ok) throw new Error("Gagal load");
+                if (!res.ok) throw new Error("Gagal mengambil data dari Google.");
                 const text = await res.text();
                 
-                // Filter kotoran dari CSV seperti di Web 1
                 let rawNames = text.split('\n').map(row => row.replace(/"/g, '').trim());
-                let cleanNames = rawNames.filter(n => n !== "" && !n.toLowerCase().includes("nama siswa") && n.toLowerCase() !== "nama");
+                let cleanNames = rawNames.filter(n => n !== "" && !n.toLowerCase().includes("nama"));
 
                 const datalist = document.getElementById('datalist-nama');
                 datalist.innerHTML = "";
@@ -170,12 +164,13 @@
                     datalist.innerHTML += `<option value="${n}">`;
                 });
                 
-                status.innerText = `✅ Absen ${kelasTarget} Siap!`;
+                status.innerText = `✅ Absen ${kelas} Berhasil Dimuat!`;
                 status.style.color = "#25D366";
-                setTimeout(() => status.style.display = 'none', 3000);
+                setTimeout(() => { if(status.innerText.includes("Berhasil")) status.style.display = 'none'; }, 2000);
             } catch (e) {
-                status.innerHTML = "❌ Gagal memuat absen. Pastikan Spreadsheet diset 'Public'.";
+                status.innerText = "❌ ERROR: " + e.message;
                 status.style.color = "#ff4757";
+                alert("Gagal memuat nama! Pastikan Spreadsheet di-set 'Public' (Anyone with the link can view)");
             }
         }
 
@@ -215,11 +210,6 @@
             const container = document.getElementById('pelanggar-container');
             container.innerHTML = "";
             
-            if(dbSiswa[activeTab].length === 0) {
-                container.innerHTML = `<p style="text-align:center; font-size:12px; color:#ccc; padding:20px;">Belum ada data di kelas ini.</p>`;
-                return;
-            }
-
             dbSiswa[activeTab].forEach((data, i) => {
                 let chipsHtml = "";
                 pelanggaranList.forEach(p => {
@@ -230,10 +220,10 @@
                 container.innerHTML += `
                     <div class="card-siswa">
                         <div class="card-header">
-                            <span class="card-title">${i + 1}. Data Pelanggar</span>
+                            <span class="card-title">${i + 1}. Masukkan Nama</span>
                             <button class="btn-hapus" onclick="hapusKotak(${i})">Hapus</button>
                         </div>
-                        <input type="text" class="input-nama" list="datalist-nama" placeholder="Ketik / Pilih Nama..." value="${data.nama}">
+                        <input type="text" class="input-nama" list="datalist-nama" placeholder="Ketik nama siswa..." value="${data.nama}">
                         <div class="chip-group">${chipsHtml}</div>
                         <input type="text" class="input-lainnya" placeholder="Pelanggaran lainnya..." style="display:${data.chips.includes('Lainnya')?'block':'none'}" value="${data.lainnya}">
                     </div>
@@ -261,7 +251,7 @@
                 });
             });
 
-            if(count === 0) return alert("Isi minimal 1 data siswa dan pelanggarannya!");
+            if(count === 0) return alert("Pilih minimal 1 nama dan pelanggarannya!");
             document.getElementById('teks-hasil').value = finalTeks;
             document.getElementById('halaman-input').style.display = "none";
             document.getElementById('halaman-hasil').style.display = "block";
@@ -270,13 +260,13 @@
         function kembaliEdit() {
             document.getElementById('halaman-input').style.display = "block";
             document.getElementById('halaman-hasil').style.display = "none";
-            document.getElementById('btn-copy').innerText = "📋 Salin Semua Teks";
         }
 
         function salinTeks() {
             const t = document.getElementById('teks-hasil');
             t.select(); document.execCommand('copy');
-            document.getElementById('btn-copy').innerText = "✅ Berhasil Disalin!";
+            document.getElementById('btn-copy').innerText = "✅ Tersalin!";
+            setTimeout(() => { document.getElementById('btn-copy').innerText = "📋 Salin Teks"; }, 2000);
         }
     </script>
 </body>
