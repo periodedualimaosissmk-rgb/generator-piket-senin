@@ -31,7 +31,6 @@
             scrollbar-width: none; -ms-overflow-style: none;
         }
         .tabs-wrapper::-webkit-scrollbar { display: none; }
-        
         .tab-item {
             flex: 0 0 auto; padding: 10px 18px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
             border-radius: 25px; color: white; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.3s;
@@ -46,14 +45,23 @@
             border-radius: 12px; padding: 15px; margin-bottom: 15px; position: relative;
         }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .card-title { font-size: 13px; font-weight: bold; color: #25D366; }
         .btn-hapus { background: transparent; color: #ff4757; border: 1px solid #ff4757; border-radius: 5px; padding: 3px 8px; font-size: 11px; cursor: pointer; }
 
+        /* CUSTOM DROPDOWN SEARCH */
+        .search-wrapper { position: relative; width: 100%; }
         input[type="text"], textarea {
             width: 100%; padding: 12px; border: none; border-radius: 10px;
             background: rgba(255, 255, 255, 0.95); color: #333; font-size: 14px; outline: none;
         }
+        .dropdown-list {
+            position: absolute; top: 100%; left: 0; right: 0; background: #fff; color: #333;
+            border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 150px; overflow-y: auto;
+            z-index: 100; display: none; text-align: left; margin-top: 5px;
+        }
+        .dropdown-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; }
+        .dropdown-item:hover { background: #f1f1f1; color: #25D366; font-weight: 600; }
 
+        /* CHIPS */
         .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
         .chip {
             padding: 7px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3);
@@ -83,7 +91,6 @@
             
             <div class="tabs-wrapper" id="tabs-kelas"></div>
             <div id="status-loading">⏳ Menarik absen...</div>
-            <datalist id="datalist-nama"></datalist>
 
             <div id="pelanggar-container"></div>
 
@@ -100,15 +107,13 @@
     </div>
 
     <script>
-        // ⚠️ GANTI ID INI DENGAN ID SPREADSHEET KAMU YANG ASLI ⚠️
         const ID_SPREADSHEET_ABSEN = "12flkTGNFV6wjHRHCfSXS4FlLr6FpME5YKsJCH_pUMP8"; 
-        
         const kelasList = ["10 TKR", "10 TKJ", "10 MP", "11 TKR", "11 TKJ", "11 MP", "12 TKR", "12 TKJ", "12 MP"];
         const pelanggaranList = ["Topi", "Dasi", "Badge", "Kaos Kaki", "Terlambat", "Lainnya"];
 
         let activeTab = "10 TKR";
-        let dbSiswa = {}; 
-        kelasList.forEach(k => dbSiswa[k] = []);
+        let dbSiswa = []; // Array objek { nama: "", chips: [], lainnya: "" }
+        let listSiswaServer = []; // Nama-nama dari Google Sheets untuk kelas aktif
 
         window.onload = () => {
             renderTabs();
@@ -127,81 +132,57 @@
             });
         }
 
-        // --- FUNGSI TARIK DATA (CONTEKAN PERSIS DARI WEB 1) ---
         async function switchTab(kelas) {
-            simpanKeMemori();
+            simpanInput();
             activeTab = kelas;
+            dbSiswa = []; // Reset inputan kalau ganti kelas biar ga campur (atau biarkan jika ingin akumulasi)
             renderTabs();
-            renderKotak();
+            tambahKotak(); 
             
             const status = document.getElementById('status-loading');
             status.style.display = 'block';
-            status.innerText = "⏳ Sedang memuat nama...";
-            status.style.color = "#ff9f43";
+            status.innerText = "⏳ Memuat data " + kelas + "...";
 
             let parts = kelas.split(' ');
             let kls = parts[0];
-            let jur = parts[1];
-            if (jur === "TKR") jur = "TKRO";
+            let jur = parts[1] === "TKR" ? "TKRO" : parts[1];
             
             const sheetName = `${kls} ${jur}`; 
             const targetRange = (kls === "12") ? "B7:B" : "D2:D";
-            
-            // Format URL ini yang paling sakti di Web 1 kamu
             const csvUrl = `https://docs.google.com/spreadsheets/d/${ID_SPREADSHEET_ABSEN}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${targetRange}&cache=${new Date().getTime()}`;
 
             try {
                 const res = await fetch(csvUrl);
-                if (!res.ok) throw new Error("Gagal mengambil data dari Google.");
                 const text = await res.text();
-                
                 let rawNames = text.split('\n').map(row => row.replace(/"/g, '').trim());
-                let cleanNames = rawNames.filter(n => n !== "" && !n.toLowerCase().includes("nama"));
-
-                const datalist = document.getElementById('datalist-nama');
-                datalist.innerHTML = "";
-                cleanNames.forEach(n => {
-                    datalist.innerHTML += `<option value="${n}">`;
-                });
+                listSiswaServer = rawNames.filter(n => n !== "" && !n.toLowerCase().includes("nama"));
                 
-                status.innerText = `✅ Absen ${kelas} Berhasil Dimuat!`;
-                status.style.color = "#25D366";
-                setTimeout(() => { if(status.innerText.includes("Berhasil")) status.style.display = 'none'; }, 2000);
+                status.innerText = `✅ Data ${kelas} Siap!`;
+                setTimeout(() => { status.style.display = 'none'; }, 2000);
             } catch (e) {
-                status.innerText = "❌ ERROR: " + e.message;
-                status.style.color = "#ff4757";
-                alert("Gagal memuat nama! Pastikan Spreadsheet di-set 'Public' (Anyone with the link can view)");
+                status.innerText = "❌ Gagal muat data.";
             }
         }
 
         function tambahKotak() {
-            simpanKeMemori();
-            dbSiswa[activeTab].push({ nama: "", chips: [], lainnya: "" });
+            dataSiswaKeMemori();
+            dbSiswa.push({ nama: "", chips: [], lainnya: "" });
             renderKotak();
         }
 
         function hapusKotak(index) {
-            simpanKeMemori();
-            dbSiswa[activeTab].splice(index, 1);
+            dataSiswaKeMemori();
+            dbSiswa.splice(index, 1);
             renderKotak();
         }
 
-        function toggleChip(index, p) {
-            simpanKeMemori();
-            let arr = dbSiswa[activeTab][index].chips;
-            let i = arr.indexOf(p);
-            if(i > -1) arr.splice(i, 1);
-            else arr.push(p);
-            renderKotak();
-        }
-
-        function simpanKeMemori() {
+        function dataSiswaKeMemori() {
             const cards = document.querySelectorAll('.card-siswa');
             cards.forEach((card, i) => {
-                if(dbSiswa[activeTab][i]) {
-                    dbSiswa[activeTab][i].nama = card.querySelector('.input-nama').value;
+                if(dbSiswa[i]) {
+                    dbSiswa[i].nama = card.querySelector('.input-nama').value;
                     let inputL = card.querySelector('.input-lainnya');
-                    if(inputL) dbSiswa[activeTab][i].lainnya = inputL.value;
+                    if(inputL) dbSiswa[i].lainnya = inputL.value;
                 }
             });
         }
@@ -210,7 +191,7 @@
             const container = document.getElementById('pelanggar-container');
             container.innerHTML = "";
             
-            dbSiswa[activeTab].forEach((data, i) => {
+            dbSiswa.forEach((data, i) => {
                 let chipsHtml = "";
                 pelanggaranList.forEach(p => {
                     const active = data.chips.includes(p) ? "active" : "";
@@ -220,38 +201,85 @@
                 container.innerHTML += `
                     <div class="card-siswa">
                         <div class="card-header">
-                            <span class="card-title">${i + 1}. Masukkan Nama</span>
-                            <button class="btn-hapus" onclick="hapusKotak(${i})">Hapus</button>
+                            <span style="font-size:12px; font-weight:bold; color:#25D366;">#${i + 1} Pelanggar</span>
+                            ${i > 0 ? `<button class="btn-hapus" onclick="hapusKotak(${i})">Hapus</button>` : ''}
                         </div>
-                        <input type="text" class="input-nama" list="datalist-nama" placeholder="Ketik nama siswa..." value="${data.nama}">
+                        <div class="search-wrapper">
+                            <input type="text" class="input-nama" placeholder="Cari Nama Siswa..." onkeyup="filterDropdown(${i}, this)" onclick="showDropdown(${i})" autocomplete="off" value="${data.nama}">
+                            <div class="dropdown-list" id="dropdown-${i}"></div>
+                        </div>
                         <div class="chip-group">${chipsHtml}</div>
-                        <input type="text" class="input-lainnya" placeholder="Pelanggaran lainnya..." style="display:${data.chips.includes('Lainnya')?'block':'none'}" value="${data.lainnya}">
+                        <input type="text" class="input-lainnya" placeholder="Ketik manual..." style="display:${data.chips.includes('Lainnya')?'block':'none'}" value="${data.lainnya}">
                     </div>
                 `;
             });
         }
 
-        function generateTeks() {
-            simpanKeMemori();
-            let finalTeks = "";
-            let count = 0;
-
-            kelasList.forEach(kelas => {
-                dbSiswa[kelas].forEach(row => {
-                    if (row.nama && row.chips.length > 0) {
-                        let list = [...row.chips];
-                        let idxL = list.indexOf("Lainnya");
-                        if(idxL > -1) {
-                            list.splice(idxL, 1);
-                            if(row.lainnya) list.push(row.lainnya);
-                        }
-                        finalTeks += `${row.nama} ${kelas.toLowerCase()}: ${list.join(', ')}\n`;
-                        count++;
-                    }
-                });
+        // --- SISTEM CUSTOM DROPDOWN (ANTI-HISTORY) ---
+        function showDropdown(index) {
+            const dropdown = document.getElementById(`dropdown-${index}`);
+            dropdown.innerHTML = "";
+            listSiswaServer.forEach(nama => {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item';
+                div.textContent = nama;
+                div.onclick = () => {
+                    document.querySelectorAll('.input-nama')[index].value = nama;
+                    dropdown.style.display = 'none';
+                    dbSiswa[index].nama = nama;
+                };
+                dropdown.appendChild(div);
             });
+            dropdown.style.display = 'block';
+        }
 
-            if(count === 0) return alert("Pilih minimal 1 nama dan pelanggarannya!");
+        function filterDropdown(index, input) {
+            const filter = input.value.toLowerCase();
+            const dropdown = document.getElementById(`dropdown-${index}`);
+            const items = dropdown.getElementsByClassName('dropdown-item');
+            let match = 0;
+            
+            for (let i = 0; i < items.length; i++) {
+                let txt = items[i].textContent || items[i].innerText;
+                if (txt.toLowerCase().indexOf(filter) > -1) {
+                    items[i].style.display = "";
+                    match++;
+                } else {
+                    items[i].style.display = "none";
+                }
+            }
+            dropdown.style.display = match > 0 ? "block" : "none";
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('input-nama')) {
+                document.querySelectorAll('.dropdown-list').forEach(d => d.style.display = 'none');
+            }
+        });
+
+        function toggleChip(index, p) {
+            dataSiswaKeMemori();
+            let arr = dbSiswa[index].chips;
+            let i = arr.indexOf(p);
+            if(i > -1) arr.splice(i, 1);
+            else arr.push(p);
+            renderKotak();
+        }
+
+        function generateTeks() {
+            dataSiswaKeMemori();
+            let finalTeks = "";
+            dbSiswa.forEach(row => {
+                if (row.nama && row.chips.length > 0) {
+                    let list = [...row.chips];
+                    if(list.includes("Lainnya")) {
+                        list = list.filter(p => p !== "Lainnya");
+                        if(row.lainnya) list.push(row.lainnya);
+                    }
+                    finalTeks += `${row.nama} ${activeTab.toLowerCase()}: ${list.join(', ')}\n`;
+                }
+            });
+            if(!finalTeks) return alert("Isi minimal 1 data!");
             document.getElementById('teks-hasil').value = finalTeks;
             document.getElementById('halaman-input').style.display = "none";
             document.getElementById('halaman-hasil').style.display = "block";
