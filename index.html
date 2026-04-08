@@ -131,7 +131,28 @@
             });
         }
 
-        // --- SISTEM TARIK DATA (MENGGUNAKAN JALUR GVIZ/CSV SEPERTI KODE LAMA) ---
+        // --- SISTEM BYPASS CORS (JSONP HACK) ---
+        let jsonpResolve = null;
+        function prosesDataGoogle(response) {
+            if(jsonpResolve) jsonpResolve(response);
+        }
+
+        function ambilDataAntiCORS(sheetName, range) {
+            return new Promise((resolve, reject) => {
+                jsonpResolve = resolve;
+                const script = document.createElement('script');
+                // Format tqx=out:json dan callback ini akan menipu sistem keamanan browser
+                const url = `https://docs.google.com/spreadsheets/d/${ID_SPREADSHEET_ABSEN}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&range=${range}&callback=prosesDataGoogle&_=${new Date().getTime()}`;
+                
+                script.src = url;
+                script.onerror = () => reject("Gagal koneksi");
+                document.body.appendChild(script);
+                
+                // Hapus script setelah loading selesai agar tidak nyampah
+                script.onload = () => setTimeout(() => document.body.removeChild(script), 500);
+            });
+        }
+
         async function switchTab(kelas) {
             simpanKeMemori();
             activeTab = kelas;
@@ -144,20 +165,27 @@
             status.style.color = "#ff9f43";
             
             let [kls, jur] = kelas.split(' ');
-            if (jur === "TKR") jur = "TKRO"; // Penyesuaian nama sheet khusus TKR
+            if (jur === "TKR") jur = "TKRO"; 
             
             const sheetName = `${kls} ${jur}`; 
             const targetRange = (kls === "12") ? "B7:B" : "D2:D";
-            const csvUrl = `https://docs.google.com/spreadsheets/d/${ID_SPREADSHEET_ABSEN}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${targetRange}&cache=${new Date().getTime()}`;
 
             try {
-                const res = await fetch(csvUrl);
-                if (!res.ok) throw new Error("Gagal load");
-                const text = await res.text();
+                // Eksekusi fungsi bypass CORS
+                const dataObj = await ambilDataAntiCORS(sheetName, targetRange);
+                let cleanNames = [];
                 
-                // Proses pembersihan nama seperti di kode yang sukses
-                let rawNames = text.split('\n').map(row => row.replace(/"/g, '').trim());
-                let cleanNames = rawNames.filter(n => n !== "" && !n.toLowerCase().includes("nama siswa") && n.toLowerCase() !== "nama");
+                // Bongkar format JSON dari Google Sheets
+                if (dataObj && dataObj.table && dataObj.table.rows) {
+                    dataObj.table.rows.forEach(row => {
+                        if (row.c && row.c[0] && row.c[0].v) {
+                            let nama = row.c[0].v.toString().trim();
+                            if (nama !== "" && !nama.toLowerCase().includes("nama")) {
+                                cleanNames.push(nama);
+                            }
+                        }
+                    });
+                }
 
                 const datalist = document.getElementById('datalist-nama');
                 datalist.innerHTML = "";
