@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generator Laporan OSIS Offline</title>
+    <title>Generator Laporan Senin (Online)</title>
     <link rel="icon" type="image/jpeg" href="https://cdn.yupra.my.id/yp/dc9y33vh.jpg">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
@@ -20,77 +20,54 @@
         .glass-effect {
             background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             padding: 20px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); color: white;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); color: white; margin-bottom: 20px;
         }
 
-        h2 { text-align: center; margin-bottom: 10px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 20px; }
+        h2 { text-align: center; margin-bottom: 5px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 20px; }
         .subtitle { text-align: center; font-size: 11px; color: #ddd; margin-bottom: 15px; }
 
-        input[type="text"], textarea {
+        input[type="text"], select, textarea {
             width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 10px;
             background: rgba(255, 255, 255, 0.95); color: #333; font-size: 14px; outline: none; font-family: 'Poppins', sans-serif;
         }
 
-        /* BUTTON SYNC */
-        .btn-sync {
-            width: 100%; padding: 10px; background: #ff9f43; color: white; border: none; border-radius: 10px;
-            font-weight: bold; font-size: 13px; cursor: pointer; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(255, 159, 67, 0.4);
-        }
+        .flex-row { display: flex; gap: 10px; margin-bottom: 5px; }
+        .flex-row select { margin-bottom: 0; }
 
-        /* TABS KELAS HORIZONTAL */
-        .tabs-container {
-            display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; margin-bottom: 15px;
-            scrollbar-width: none;
-        }
-        .tabs-container::-webkit-scrollbar { display: none; } 
-        
-        .tab-btn {
-            flex: 0 0 auto; padding: 8px 16px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 20px; color: white; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.3s;
-        }
-        .tab-btn.active { background: #25D366; border-color: #25D366; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.4); }
+        #status-loading { font-size: 11px; color: #ff9f43; text-align: center; margin-bottom: 10px; font-weight: bold; display: none; }
 
-        /* CARD PELANGGAR */
-        .card-pelanggar {
-            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+        /* CARD SISWA */
+        .card-siswa {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
             border-radius: 12px; padding: 15px; margin-bottom: 15px; position: relative;
         }
-        .btn-hapus {
-            position: absolute; top: 10px; right: 10px; background: rgba(255, 71, 87, 0.2); color: #ff4757;
-            border: none; border-radius: 5px; padding: 5px 10px; font-size: 12px; font-weight: bold; cursor: pointer;
-        }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card-title { font-size: 14px; font-weight: bold; color: #25D366; }
+        .btn-hapus { background: transparent; color: #ff4757; border: 1px solid #ff4757; border-radius: 5px; padding: 3px 8px; font-size: 11px; cursor: pointer; }
 
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #25D366; font-size: 12px; }
-
-        /* CHIPS (Senin Mode) */
-        .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        /* CHIPS */
+        .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
         .chip {
             padding: 6px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3);
             border-radius: 20px; color: white; cursor: pointer; font-size: 11px; transition: 0.2s; user-select: none;
         }
         .chip.active { background: #ff9f43; border-color: #ff9f43; color: #fff; font-weight: 600; }
 
-        .input-lainnya {
-            display: none; width: 100%; margin-top: 10px; padding: 8px; border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-size: 12px;
-        }
+        .input-lainnya { display: none; width: 100%; margin-top: 10px; padding: 8px; font-size: 12px; }
 
         /* BUTTONS */
         .btn-tambah {
             width: 100%; padding: 12px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px;
-            background: transparent; color: white; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.3s; margin-bottom: 20px;
+            background: transparent; color: white; font-weight: 600; font-size: 14px; cursor: pointer; margin-bottom: 15px; transition: 0.3s;
         }
+        .btn-tambah:hover { border-color: #25D366; color: #25D366; background: rgba(37, 211, 102, 0.1); }
         
         .btn-primary {
             width: 100%; padding: 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, #25D366, #128C7E);
             color: white; font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
         }
-        .btn-secondary {
-            width: 100%; padding: 12px; border: none; border-radius: 10px; background: rgba(255,255,255,0.2);
-            color: white; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 10px;
-        }
 
-        #status-sync { font-size: 11px; color: #25D366; text-align: center; margin-bottom: 10px; font-weight: bold; }
         #halaman-hasil { display: none; }
     </style>
 </head>
@@ -99,249 +76,188 @@
     <div class="container">
         
         <div class="glass-effect" id="halaman-input">
-            <h2>📝 Generator Laporan (Offline)</h2>
-            <p class="subtitle">Sistem Input Massal & Combo Pelanggaran</p>
-            
-            <button class="btn-sync" onclick="syncDataAbsen()" id="btn-sync">🔄 Download Data Absen (Harus ada Wi-Fi)</button>
-            <div id="status-sync"></div>
+            <h2>🚩 Laporan Senin (Online)</h2>
+            <p class="subtitle">Data diambil langsung dari server</p>
 
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label>Nama Petugas (Wajib):</label>
-                <input type="text" id="input-petugas" placeholder="Contoh: Rafka">
+            <input type="text" id="input-petugas" placeholder="Nama Petugas (Wajib)">
+
+            <div class="flex-row">
+                <select id="select-kelas" onchange="loadSiswaLive()">
+                    <option value="" disabled selected>Pilih Kelas</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                </select>
+                <select id="select-jurusan" onchange="loadSiswaLive()">
+                    <option value="" disabled selected>Pilih Jurusan</option>
+                    <option value="TKR">TKR</option>
+                    <option value="TKJ">TKJ</option>
+                    <option value="MP">MP</option>
+                </select>
             </div>
-
-            <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">Pilih Kelas & Jurusan:</label>
-            <div class="tabs-container" id="tabs-container"></div>
+            
+            <div id="status-loading">⏳ Menarik data absen...</div>
 
             <datalist id="datalist-nama"></datalist>
 
-            <div id="pelanggar-container"></div>
+            <div id="list-pelanggar"></div>
 
-            <button class="btn-tambah" onclick="tambahPelanggar()">➕ Tambah Pelanggar di Kelas Ini</button>
-            <button class="btn-primary" onclick="tampilkanHasil()">Buat Teks Laporan 📋</button>
+            <button class="btn-tambah" onclick="tambahKotak()">➕ Tambah Pelanggar</button>
+            <button class="btn-primary" onclick="generateLaporan()">🚀 Buat Teks Laporan</button>
         </div>
 
         <div class="glass-effect" id="halaman-hasil">
             <h2>📋 Hasil Laporan</h2>
-            <p style="font-size: 12px; color: #ddd; margin-bottom: 15px; text-align: center;">Salin teks ini dan kirim ke Bot WhatsApp.</p>
-            
+            <p style="font-size: 12px; color: #ddd; margin-bottom: 15px; text-align: center;">Salin teks ini dan kirim ke Bot WA.</p>
             <textarea id="teks-hasil" rows="15"></textarea>
-            
-            <button class="btn-primary" onclick="salinTeks()" id="btn-copy">📋 Salin Semua Teks</button>
-            <button class="btn-secondary" onclick="kembaliEdit()">⬅️ Kembali Edit Form</button>
+            <button class="btn-primary" onclick="salinTeks()" id="btn-copy">📋 Salin Teks</button>
+            <button class="btn-primary" style="background: rgba(255,255,255,0.2); margin-top:10px; box-shadow: none;" onclick="kembaliEdit()">⬅️ Kembali Edit Form</button>
         </div>
 
     </div>
 
     <script>
+        // ⚠️ ID SPREADSHEET ABSENSI
         const ID_SPREADSHEET_ABSEN = "12flkTGNFV6wjHRHCfSXS4FlLr6FpME5YKsJCH_pUMP8"; 
+        const pelanggaranList = ["Topi", "Dasi", "Badge", "Kaos Kaki", "Terlambat", "Lainnya"];
         
-        const kelasList = ["10 TKR", "10 TKJ", "10 MP", "11 TKR", "11 TKJ", "11 MP", "12 TKR", "12 TKJ", "12 MP"];
-        const sheetMapping = {
-            "10 TKR": { sheet: "10 TKRO", range: "D2:D" }, "10 TKJ": { sheet: "10 TKJ", range: "D2:D" }, "10 MP":  { sheet: "10 MP", range: "D2:D" },
-            "11 TKR": { sheet: "11 TKRO", range: "D2:D" }, "11 TKJ": { sheet: "11 TKJ", range: "D2:D" }, "11 MP":  { sheet: "11 MP", range: "D2:D" },
-            "12 TKR": { sheet: "12 TKRO", range: "B7:B" }, "12 TKJ": { sheet: "12 TKJ", range: "B7:B" }, "12 MP":  { sheet: "12 MP", range: "B7:B" }
-        };
-
-        const daftarPelanggaran = ["Topi", "Dasi", "Badge", "Kaos Kaki", "Terlambat", "Lainnya"];
-
-        // State Data
-        let stateData = {};
-        kelasList.forEach(k => stateData[k] = []); 
-        let cacheNama = {}; 
-        let activeTab = "10 TKR";
+        let dataSiswa = []; 
 
         window.onload = () => {
-            const memoriLokal = localStorage.getItem('absen_smkth');
-            if (memoriLokal) {
-                cacheNama = JSON.parse(memoriLokal);
-                document.getElementById('status-sync').innerText = "✅ Data Absen Tersedia Offline";
-            } else {
-                document.getElementById('status-sync').innerHTML = "⚠️ <span style='color:#ff4757'>Belum ada data absen. Klik Download dulu!</span>";
-            }
-            renderTabs();
-            switchTab("10 TKR");
+            tambahKotak(); // Munculkan 1 kotak di awal
         };
 
-        // --- SISTEM SYNC DATA (AMBIL DARI GOOGLE SHEETS) ---
-        async function syncDataAbsen() {
-            const btn = document.getElementById('btn-sync');
-            const status = document.getElementById('status-sync');
+        // --- SISTEM TARIK DATA LIVE (ONLINE) ---
+        async function loadSiswaLive() {
+            const kls = document.getElementById('select-kelas').value;
+            let jur = document.getElementById('select-jurusan').value;
             
-            btn.innerText = "⏳ Sedang Mendownload (Jangan ditutup)...";
-            btn.disabled = true;
-            status.innerText = "Mengambil data dari Google Sheets...";
+            if(!kls || !jur) return;
 
-            let dataBaru = {};
+            const status = document.getElementById('status-loading');
+            status.style.display = 'block';
+            status.innerText = "⏳ Menarik data absen dari server...";
+            status.style.color = "#ff9f43";
+
+            if (jur === "TKR") jur = "TKRO";
+            const sheetName = `${kls} ${jur}`;
+            const targetRange = (kls === "12") ? "B7:B" : "D2:D";
+            
+            const url = `https://docs.google.com/spreadsheets/d/${ID_SPREADSHEET_ABSEN}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${targetRange}&cache=${new Date().getTime()}`;
 
             try {
-                for (let kelas of kelasList) {
-                    const config = sheetMapping[kelas];
-                    const csvUrl = `https://docs.google.com/spreadsheets/d/${ID_SPREADSHEET_ABSEN}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(config.sheet)}&range=${config.range}&cache=${new Date().getTime()}`;
-                    
-                    const res = await fetch(csvUrl);
-                    const text = await res.text();
-                    let rawNames = text.split('\n').map(row => row.replace(/"/g, '').trim());
-                    dataBaru[kelas] = rawNames.filter(n => n !== "" && !n.toLowerCase().includes("nama siswa") && n.toLowerCase() !== "nama");
-                }
-
-                localStorage.setItem('absen_smkth', JSON.stringify(dataBaru));
-                cacheNama = dataBaru;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Network response was not ok");
+                const text = await res.text();
                 
-                status.innerText = "✅ Download Selesai! Web siap dipakai OFFLINE.";
-                updateDatalist(cacheNama[activeTab] || []);
-            } catch (err) {
-                status.innerHTML = "❌ <span style='color:#ff4757'>Gagal Download! Pastikan ada koneksi internet.</span>";
-            }
-            btn.innerText = "🔄 Update Data Absen Lagi";
-            btn.disabled = false;
-        }
+                let names = text.split('\n').map(row => row.replace(/"/g, '').trim());
+                let cleanNames = names.filter(n => n !== "" && !n.toLowerCase().includes("nama"));
 
-        // --- UI NAVIGATION ---
-        function renderTabs() {
-            const container = document.getElementById('tabs-container');
-            container.innerHTML = "";
-            kelasList.forEach(kelas => {
-                const btn = document.createElement('div');
-                btn.className = `tab-btn ${kelas === activeTab ? 'active' : ''}`;
-                btn.textContent = kelas;
-                btn.onclick = () => switchTab(kelas);
-                container.appendChild(btn);
-            });
-        }
-
-        function switchTab(kelas) {
-            simpanKeState();
-            activeTab = kelas;
-            renderTabs();
-            renderPelanggar();
-            if (cacheNama[kelas]) updateDatalist(cacheNama[kelas]);
-        }
-
-        function updateDatalist(listNama) {
-            const datalist = document.getElementById('datalist-nama');
-            datalist.innerHTML = "";
-            listNama.forEach(nama => {
-                const option = document.createElement('option');
-                option.value = nama;
-                datalist.appendChild(option);
-            });
-        }
-
-        // --- FORM LOGIC ---
-        function tambahPelanggar() {
-            simpanKeState(); 
-            stateData[activeTab].push({ nama: "", chips: [], teksLainnya: "" }); 
-            renderPelanggar(); 
-        }
-
-        function hapusPelanggar(index) {
-            simpanKeState();
-            stateData[activeTab].splice(index, 1);
-            renderPelanggar();
-        }
-
-        function toggleChipState(index, namaChip) {
-            simpanKeState(); 
-            const data = stateData[activeTab][index];
-            const chipIndex = data.chips.indexOf(namaChip);
-            
-            if (chipIndex > -1) {
-                data.chips.splice(chipIndex, 1); 
-            } else {
-                data.chips.push(namaChip); 
-            }
-            renderPelanggar();
-        }
-
-        function simpanKeState() {
-            const cards = document.querySelectorAll('.card-pelanggar');
-            cards.forEach((card, index) => {
-                const inputNama = card.querySelector('.input-nama').value;
-                const inputLainnya = card.querySelector('.input-lainnya') ? card.querySelector('.input-lainnya').value : "";
-                
-                if (stateData[activeTab][index]) {
-                    stateData[activeTab][index].nama = inputNama;
-                    stateData[activeTab][index].teksLainnya = inputLainnya;
-                }
-            });
-        }
-
-        function renderPelanggar() {
-            const container = document.getElementById('pelanggar-container');
-            container.innerHTML = "";
-            const dataArray = stateData[activeTab];
-
-            if (dataArray.length === 0) {
-                container.innerHTML = `<p style="font-size:12px; color:#aaa; text-align:center; padding: 20px 0;">Belum ada data dicatat.</p>`;
-                return;
-            }
-
-            dataArray.forEach((data, index) => {
-                let chipsHtml = "";
-                let isLainnyaActive = data.chips.includes("Lainnya");
-
-                daftarPelanggaran.forEach(p => {
-                    const isActive = data.chips.includes(p) ? "active" : "";
-                    chipsHtml += `<div class="chip ${isActive}" onclick="toggleChipState(${index}, '${p}')">${p}</div>`;
+                const datalist = document.getElementById('datalist-nama');
+                datalist.innerHTML = "";
+                cleanNames.forEach(n => {
+                    datalist.innerHTML += `<option value="${n}">`;
                 });
 
-                const displayLainnya = isLainnyaActive ? "block" : "none";
+                status.innerText = `✅ Data ${kls} ${jur.replace('TKRO','TKR')} berhasil dimuat!`;
+                status.style.color = "#25D366";
+                setTimeout(() => status.style.display = 'none', 3000);
+            } catch (e) {
+                status.innerHTML = "❌ Gagal menarik data. Pastikan ada internet.";
+                status.style.color = "#ff4757";
+            }
+        }
 
-                const html = `
-                    <div class="card-pelanggar">
-                        <button class="btn-hapus" onclick="hapusPelanggar(${index})">Hapus</button>
-                        <div class="form-group">
-                            <label>Nama Siswa Lengkap:</label>
-                            <input type="text" class="input-nama" list="datalist-nama" placeholder="Ketik/Pilih nama lengkap..." value="${data.nama}">
+        // --- MANAJEMEN KOTAK SISWA ---
+        function tambahKotak() {
+            simpanInput();
+            dataSiswa.push({ nama: "", chips: [], lainnya: "" });
+            renderKotak();
+        }
+
+        function hapusKotak(index) {
+            simpanInput();
+            dataSiswa.splice(index, 1);
+            renderKotak();
+        }
+
+        function toggleChip(index, namaChip) {
+            simpanInput();
+            let arr = dataSiswa[index].chips;
+            let i = arr.indexOf(namaChip);
+            if(i > -1) arr.splice(i, 1);
+            else arr.push(namaChip);
+            renderKotak();
+        }
+
+        function simpanInput() {
+            const cards = document.querySelectorAll('.card-siswa');
+            cards.forEach((card, i) => {
+                if (dataSiswa[i]) {
+                    dataSiswa[i].nama = card.querySelector('.input-nama').value;
+                    let inputLainnya = card.querySelector('.input-lainnya');
+                    if(inputLainnya) dataSiswa[i].lainnya = inputLainnya.value;
+                }
+            });
+        }
+
+        function renderKotak() {
+            const container = document.getElementById('list-pelanggar');
+            container.innerHTML = "";
+            
+            dataSiswa.forEach((data, i) => {
+                let chipsHtml = "";
+                let isLainnya = data.chips.includes("Lainnya");
+                
+                pelanggaranList.forEach(p => {
+                    const active = data.chips.includes(p) ? "active" : "";
+                    chipsHtml += `<div class="chip ${active}" onclick="toggleChip(${i}, '${p}')">${p}</div>`;
+                });
+
+                container.innerHTML += `
+                    <div class="card-siswa">
+                        <div class="card-header">
+                            <span class="card-title">${i + 1}. Nama Pelanggar</span>
+                            ${i > 0 ? `<button class="btn-hapus" onclick="hapusKotak(${i})">X Hapus</button>` : ''}
                         </div>
+                        <input type="text" class="input-nama" list="datalist-nama" placeholder="Ketik nama..." value="${data.nama}">
+                        <div style="font-size:12px; color:#ddd; margin-top:5px;">Pelanggaran Senin:</div>
                         <div class="chip-group">${chipsHtml}</div>
-                        <input type="text" class="input-lainnya" placeholder="Ketik pelanggaran lainnya..." style="display: ${displayLainnya};" value="${data.teksLainnya}">
+                        <input type="text" class="input-lainnya" placeholder="Ketik pelanggaran lainnya..." style="display: ${isLainnya ? 'block' : 'none'};" value="${data.lainnya}">
                     </div>
                 `;
-                container.innerHTML += html;
             });
         }
 
-        // --- HASIL & COPY ---
-        function tampilkanHasil() {
-            simpanKeState(); 
+        // --- GENERATE HASIL TEKS ---
+        function generateLaporan() {
+            simpanInput();
+            const petugas = document.getElementById('input-petugas').value.trim();
+            const kls = document.getElementById('select-kelas').value;
+            const jur = document.getElementById('select-jurusan').value;
 
-            const namaPetugas = document.getElementById('input-petugas').value.trim();
-            if (!namaPetugas) { alert("⚠️ Nama Petugas wajib diisi!"); return; }
+            if (!petugas) return alert("⚠️ Nama Petugas belum diisi!");
+            if (!kls || !jur) return alert("⚠️ Kelas & Jurusan di atas belum dipilih!");
 
-            let formatBot = `.addlaporan (${namaPetugas})\n`;
-            let totalData = 0;
+            let teks = `.addlaporan (${petugas})\n`;
+            let valid = 0;
 
-            kelasList.forEach(kelas => {
-                const dataDiKelas = stateData[kelas];
-                dataDiKelas.forEach(row => {
-                    if (row.nama && row.chips.length > 0) {
-                        
-                        let listPelanggaran = [...row.chips];
-                        
-                        // Ekstrak teks "Lainnya" jika dicentang
-                        let idxLainnya = listPelanggaran.indexOf("Lainnya");
-                        if (idxLainnya > -1) {
-                            listPelanggaran.splice(idxLainnya, 1); // Hapus kata "Lainnya"
-                            if (row.teksLainnya.trim() !== "") {
-                                listPelanggaran.push(row.teksLainnya.trim()); // Masukkan teks manualnya
-                            }
-                        }
-
-                        const stringPelanggaran = listPelanggaran.join(', '); 
-                        if (stringPelanggaran !== "") {
-                            // Format: NAMA 10 TKR: Topi, Dasi
-                            formatBot += `${row.nama} ${kelas}: ${stringPelanggaran}\n`;
-                            totalData++;
-                        }
+            dataSiswa.forEach(row => {
+                if (row.nama && row.chips.length > 0) {
+                    let list = [...row.chips];
+                    let idxLainnya = list.indexOf("Lainnya");
+                    if (idxLainnya > -1) {
+                        list.splice(idxLainnya, 1);
+                        if(row.lainnya) list.push(row.lainnya);
                     }
-                });
+                    teks += `${row.nama} ${kls} ${jur.toLowerCase()}: ${list.join(', ')}\n`;
+                    valid++;
+                }
             });
 
-            if (totalData === 0) { alert("⚠️ Data kosong. Masukkan minimal 1 siswa dan pelanggarannya."); return; }
+            if (valid === 0) return alert("⚠️ Data masih kosong. Isi minimal 1 nama dan pelanggarannya.");
 
-            document.getElementById('teks-hasil').value = formatBot;
+            document.getElementById('teks-hasil').value = teks;
             document.getElementById('halaman-input').style.display = 'none';
             document.getElementById('halaman-hasil').style.display = 'block';
         }
@@ -349,21 +265,15 @@
         function kembaliEdit() {
             document.getElementById('halaman-input').style.display = 'block';
             document.getElementById('halaman-hasil').style.display = 'none';
-            document.getElementById('btn-copy').innerText = "📋 Salin Semua Teks";
+            document.getElementById('btn-copy').innerText = "📋 Salin Teks";
         }
 
         function salinTeks() {
-            const teks = document.getElementById('teks-hasil');
-            teks.select();
-            teks.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(teks.value).then(() => {
-                document.getElementById('btn-copy').innerText = "✅ Berhasil Disalin!";
-            }).catch(err => {
-                document.execCommand('copy');
-                document.getElementById('btn-copy').innerText = "✅ Berhasil Disalin!";
-            });
+            const t = document.getElementById('teks-hasil');
+            t.select(); t.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            document.getElementById('btn-copy').innerText = "✅ Teks Tersalin!";
         }
     </script>
 </body>
 </html>
-
