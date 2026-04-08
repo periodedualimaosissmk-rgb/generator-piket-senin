@@ -85,7 +85,7 @@
             <h2>📝 Generator Laporan</h2>
             
             <div class="tabs-wrapper" id="tabs-kelas"></div>
-            <div id="status-loading">⏳ Menarik data server...</div>
+            <div id="status-loading">⏳ Menarik absen...</div>
             <datalist id="datalist-nama"></datalist>
 
             <div id="pelanggar-container"></div>
@@ -104,8 +104,8 @@
     </div>
 
     <script>
-        // ⚠️ JALUR RESMI GOOGLE SCRIPT
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDktAfr8a60X4mg7jFIgtAbblSVAu7y6w6DsJnmyYF3DrVWV_bcHaTwM9cqgCw9r77/exec";
+        // ⚠️ ID SPREADSHEET ABSENSI (Pastikan setingannya Anyone with the link can view)
+        const ID_SPREADSHEET_ABSEN = "12flkTGNFV6wjHRHCfSXS4FlLr6FpME5YKsJCH_pUMP8"; 
         
         const kelasList = ["10 TKR", "10 TKJ", "10 MP", "11 TKR", "11 TKJ", "11 MP", "12 TKR", "12 TKJ", "12 MP"];
         const pelanggaranList = ["Topi", "Dasi", "Badge", "Kaos Kaki", "Terlambat", "Lainnya"];
@@ -131,6 +131,7 @@
             });
         }
 
+        // --- SISTEM TARIK DATA (MENGGUNAKAN JALUR GVIZ/CSV SEPERTI KODE LAMA) ---
         async function switchTab(kelas) {
             simpanKeMemori();
             activeTab = kelas;
@@ -139,29 +140,36 @@
             
             const status = document.getElementById('status-loading');
             status.style.display = 'block';
-            status.innerText = "⏳ Menarik data server...";
+            status.innerText = "⏳ Menarik data absen server...";
             status.style.color = "#ff9f43";
             
             let [kls, jur] = kelas.split(' ');
+            if (jur === "TKR") jur = "TKRO"; // Penyesuaian nama sheet khusus TKR
             
-            // Menggunakan jalur Google Script yg dijamin aman dari CORS
-            const url = `${SCRIPT_URL}?action=getSiswa&kelas=${kls}&jurusan=${jur}`;
+            const sheetName = `${kls} ${jur}`; 
+            const targetRange = (kls === "12") ? "B7:B" : "D2:D";
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${ID_SPREADSHEET_ABSEN}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${targetRange}&cache=${new Date().getTime()}`;
 
             try {
-                const res = await fetch(url);
-                const dataObj = await res.json();
+                const res = await fetch(csvUrl);
+                if (!res.ok) throw new Error("Gagal load");
+                const text = await res.text();
                 
-                if (dataObj.status === "success") {
-                    const names = dataObj.data;
-                    const datalist = document.getElementById('datalist-nama');
-                    datalist.innerHTML = "";
-                    names.forEach(n => datalist.innerHTML += `<option value="${n}">`);
-                    status.style.display = 'none';
-                } else {
-                    throw new Error("Gagal dari server");
-                }
+                // Proses pembersihan nama seperti di kode yang sukses
+                let rawNames = text.split('\n').map(row => row.replace(/"/g, '').trim());
+                let cleanNames = rawNames.filter(n => n !== "" && !n.toLowerCase().includes("nama siswa") && n.toLowerCase() !== "nama");
+
+                const datalist = document.getElementById('datalist-nama');
+                datalist.innerHTML = "";
+                cleanNames.forEach(n => {
+                    datalist.innerHTML += `<option value="${n}">`;
+                });
+                
+                status.innerText = `✅ Absen ${kelas} Siap!`;
+                status.style.color = "#25D366";
+                setTimeout(() => status.style.display = 'none', 3000);
             } catch (e) {
-                status.innerText = "❌ Gagal muat absen (Cek Internet)";
+                status.innerText = "❌ Gagal muat absen. Cek koneksi.";
                 status.style.color = "#ff4757";
             }
         }
