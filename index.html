@@ -85,9 +85,7 @@
             <h2>📝 Generator Laporan</h2>
             
             <div class="tabs-wrapper" id="tabs-kelas"></div>
-
-            <div id="status-loading">⏳ Menarik absen...</div>
-
+            <div id="status-loading">⏳ Menarik data server...</div>
             <datalist id="datalist-nama"></datalist>
 
             <div id="pelanggar-container"></div>
@@ -106,12 +104,14 @@
     </div>
 
     <script>
-        const ID_SPREADSHEET_ABSEN = "12flkTGNFV6wjHRHCfSXS4FlLr6FpME5YKsJCH_pUMP8"; 
+        // ⚠️ JALUR RESMI GOOGLE SCRIPT
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDktAfr8a60X4mg7jFIgtAbblSVAu7y6w6DsJnmyYF3DrVWV_bcHaTwM9cqgCw9r77/exec";
+        
         const kelasList = ["10 TKR", "10 TKJ", "10 MP", "11 TKR", "11 TKJ", "11 MP", "12 TKR", "12 TKJ", "12 MP"];
         const pelanggaranList = ["Topi", "Dasi", "Badge", "Kaos Kaki", "Terlambat", "Lainnya"];
 
         let activeTab = "10 TKR";
-        let dbSiswa = {}; // Nyimpan data input per kelas { "10 TKR": [ {nama, chips, lainnya} ] }
+        let dbSiswa = {}; 
         kelasList.forEach(k => dbSiswa[k] = []);
 
         window.onload = () => {
@@ -137,26 +137,32 @@
             renderTabs();
             renderKotak();
             
-            // Tarik absen live untuk datalist
             const status = document.getElementById('status-loading');
             status.style.display = 'block';
+            status.innerText = "⏳ Menarik data server...";
+            status.style.color = "#ff9f43";
             
             let [kls, jur] = kelas.split(' ');
-            if (jur === "TKR") jur = "TKRO";
-            const range = (kls === "12") ? "B7:B" : "D2:D";
-            const url = `https://docs.google.com/spreadsheets/d/${ID_SPREADSHEET_ABSEN}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(kls+' '+jur)}&range=${range}&cache=${new Date().getTime()}`;
+            
+            // Menggunakan jalur Google Script yg dijamin aman dari CORS
+            const url = `${SCRIPT_URL}?action=getSiswa&kelas=${kls}&jurusan=${jur}`;
 
             try {
                 const res = await fetch(url);
-                const text = await res.text();
-                let names = text.split('\n').map(r => r.replace(/"/g, '').trim()).filter(n => n && !n.toLowerCase().includes("nama"));
+                const dataObj = await res.json();
                 
-                const datalist = document.getElementById('datalist-nama');
-                datalist.innerHTML = "";
-                names.forEach(n => datalist.innerHTML += `<option value="${n}">`);
-                status.style.display = 'none';
+                if (dataObj.status === "success") {
+                    const names = dataObj.data;
+                    const datalist = document.getElementById('datalist-nama');
+                    datalist.innerHTML = "";
+                    names.forEach(n => datalist.innerHTML += `<option value="${n}">`);
+                    status.style.display = 'none';
+                } else {
+                    throw new Error("Gagal dari server");
+                }
             } catch (e) {
                 status.innerText = "❌ Gagal muat absen (Cek Internet)";
+                status.style.color = "#ff4757";
             }
         }
 
@@ -214,7 +220,7 @@
                             <span class="card-title">${i + 1}. Data Pelanggar</span>
                             <button class="btn-hapus" onclick="hapusKotak(${i})">Hapus</button>
                         </div>
-                        <input type="text" class="input-nama" list="datalist-nama" placeholder="Pilih nama..." value="${data.nama}">
+                        <input type="text" class="input-nama" list="datalist-nama" placeholder="Ketik / Pilih Nama..." value="${data.nama}">
                         <div class="chip-group">${chipsHtml}</div>
                         <input type="text" class="input-lainnya" placeholder="Pelanggaran lainnya..." style="display:${data.chips.includes('Lainnya')?'block':'none'}" value="${data.lainnya}">
                     </div>
@@ -242,7 +248,7 @@
                 });
             });
 
-            if(count === 0) return alert("Isi minimal 1 data!");
+            if(count === 0) return alert("Isi minimal 1 data siswa dan pelanggarannya!");
             document.getElementById('teks-hasil').value = finalTeks;
             document.getElementById('halaman-input').style.display = "none";
             document.getElementById('halaman-hasil').style.display = "block";
